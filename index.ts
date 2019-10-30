@@ -1,10 +1,10 @@
 /**
- * ts nodejs代码
+ * ts写nodejs代码
  */
 
-import * as path from 'path';
 import * as request from 'request';
 import {urlList} from './week_all_url';
+import * as program from 'commander';
 
 async function asyncRequest(options: any) {
     return new Promise((resolve, reject) => {
@@ -98,4 +98,21 @@ async function main() {
     }
     console.log('done');
 }
-main();
+
+program
+  .version('0.0.1')
+  .option('-f,--file <type>', 'url列表(默认url.txt,换行分隔)', 'url.txt')
+  .option('-t,--times <type>', '请求遍数(默认1,多次请求用于计算平均值', 1);
+
+program.on('--help', function(){
+  console.log('Examples:');
+  console.log('');
+  console.log('$ node index.js -f url.txt -t 1');
+  console.log('$ node index.js -h');
+});
+program.parse(process.argv);
+program.help();
+
+if (program.file && program.times) {
+    main();
+}
