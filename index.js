@@ -161,14 +161,14 @@ function getData(urlList, times, api) {
                     body = safeParseJSON(res.body);
                     if (body && body.audits) {
                         reqSuccessCounter++;
-                        if (reqSuccessCounter === times)
-                            return [3 /*break*/, 5];
                         tmp = extractField(body);
                         for (key in tmp) {
                             if (tmp.hasOwnProperty(key) && tmp[key] !== undefined) {
                                 avg[key].push(tmp[key]);
                             }
                         }
+                        if (reqSuccessCounter === times)
+                            return [3 /*break*/, 5];
                     }
                     _a.label = 4;
                 case 4:
@@ -222,7 +222,7 @@ function run(file, times, resultFile, api) {
                 case 1:
                     fileRes = _a.sent();
                     if (fileRes.data) {
-                        urlList = fileRes.data.toString().split('\n');
+                        urlList = fileRes.data.toString().trim().split('\n');
                     }
                     return [4 /*yield*/, getData(urlList, times, api)];
                 case 2:

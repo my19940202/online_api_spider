@@ -106,13 +106,13 @@ async function getData(urlList: string[], times: number, api: string) {
             body = safeParseJSON(res.body);
             if (body && body.audits) {
                 reqSuccessCounter++;
-                if (reqSuccessCounter === times) break;
                 let tmp = extractField(body);
                 for (const key in tmp) {
                     if (tmp.hasOwnProperty(key) && tmp[key] !== undefined) {
                         avg[key].push(tmp[key]);
                     }
                 }
+                if (reqSuccessCounter === times) break;
             }
         }
         // 平均值处理
@@ -147,7 +147,7 @@ async function run(file: string, times: number, resultFile: string, api: string)
     let urlList;
     let fileRes: any = await asyncReadFile(file);
     if (fileRes.data) {
-        urlList = fileRes.data.toString().split('\n');
+        urlList = fileRes.data.toString().trim().split('\n');
     }
     let data = await getData(urlList, times, api);
     
