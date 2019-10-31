@@ -2,7 +2,6 @@
  * ts写nodejs代码
  */
 import * as request from 'request';
-import {urlList} from './week_all_url';
 import * as program from 'commander';
 import * as fs from 'fs';
 
@@ -172,7 +171,7 @@ program.on('--help', function(){
 });
 program.parse(process.argv);
 
-if (program.file && program.times) {
+if (program.input && program.times) {
     run(program.input, +program.times, program.out, program.api);
 }
 // program.help();
