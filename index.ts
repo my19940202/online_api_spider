@@ -1,15 +1,22 @@
 /**
  * ts写nodejs代码
  */
-
 import * as request from 'request';
 import {urlList} from './week_all_url';
 import * as program from 'commander';
 import * as fs from 'fs';
 
-async function asyncRequest(options: any) {
+const config = {
+    times: 1,
+    input: 'url.txt',
+    out: 'result.csv',
+    api: 'http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url='
+}
+
+async function asyncRequest(url: any) {
+    console.log('running');
     return new Promise((resolve, reject) => {
-        request(options, (error, response, body) => resolve({error, response, body}));
+        request(url, (error, response, body) => resolve({error, response, body}));
     });
 }
 
@@ -44,6 +51,7 @@ function safeParseJSON(str: string) {
         }
         return ret;
     } catch (e) {
+        console.log('safeParseJSON', e, str);
         return {};
     }
 }
@@ -59,8 +67,8 @@ function extractField(body: any) {
         firstContentfulPaint = +tmp['first-contentful-paint'].rawValue.toFixed(2);
     }
     else {
-        firstMeaningfulPaint = 'error';
-        firstContentfulPaint = 'error';
+        firstMeaningfulPaint = 0;
+        firstContentfulPaint = 0;
     }
 
     let networks = tmp['network-requests'];
@@ -69,66 +77,80 @@ function extractField(body: any) {
         reqSize = +(tmp['total-byte-weight'].rawValue / 1024).toFixed(2);
         reqNum = networks.rawValue;
         jsNum = tmpItem.filter(ele => ele.resourceType === 'Script').length;
-        cssNum= tmpItem.filter(ele => ele.resourceType === 'Stylesheet').length;
-        imgNum= tmpItem.filter(ele => ele.resourceType === 'Image').length;
+        cssNum = tmpItem.filter(ele => ele.resourceType === 'Stylesheet').length;
+        imgNum = tmpItem.filter(ele => ele.resourceType === 'Image').length;
     }
+    // 白屏,首屏,总请求数,总资源大小,js数量,img数量,css数量
     ret = {
-        firstMeaningfulPaint, firstContentfulPaint, reqNum,
+        firstContentfulPaint, firstMeaningfulPaint, reqNum,
         reqSize, jsNum, imgNum, cssNum
     };
-    console.log(ret, 'extractFields');
     return ret;
 }
-const config = {
-    api: 'http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url='
-}
-async function getData(urlList: string[], times: number) {
-    // console.log('url, 白屏,首屏,总请求数,总资源大小,js数量,img数量,css数量');
-    let ret = {}
+
+async function getData(urlList: string[], times: number, api: string) {
+    let ret = {};
     for (let idx = 0; idx < urlList.length; idx++) {
-        const url = config.api + urlList[idx];
-        let response: any = await asyncRequest(url);
-        // 白屏,首屏,总请求数,总资源大小,js数量,img数量,css数量
-        let body = safeParseJSON(response.body);
-        if (body && body.audits) {
-            ret[urlList[idx]] = extractField(body);
+        const url = api + urlList[idx];
+        let res, body;
+        let reqSuccessCounter = 0;
+        let avg = {
+            firstContentfulPaint: [], firstMeaningfulPaint: [], reqNum: [],
+            reqSize: [], jsNum: [], imgNum: [], cssNum: []
+        };
+        console.log(`going to reqest ${idx}th url`, times + 3, );
+        ret[urlList[idx]] = {};
+        
+        // 多次请求 求平均值(最多再重试3次 不然请求次数太多)
+        for (let index = 0; index < times + 3; index++) {
+            res = await asyncRequest(url);
+            body = safeParseJSON(res.body);
+            if (body && body.audits) {
+                reqSuccessCounter++;
+                if (reqSuccessCounter === times) break;
+                let tmp = extractField(body);
+                for (const key in tmp) {
+                    if (tmp.hasOwnProperty(key) && tmp[key] !== undefined) {
+                        avg[key].push(tmp[key]);
+                    }
+                }
+            }
         }
-        // else {
-        //     // json异常的情况 重新请求 < 3次
-        //     for (let index = 0; index < 3; index++) {
-        //         response = await asyncRequest(url);
-        //         body = safeParseJSON(response.body);
-        //         if (body && body.audits) {
-        //             extractField(body);
-        //             break;
-        //         }
-        //         else {
-        //             continue;
-        //         }
-        //     }
-        // }
+        // 平均值处理
+        for (const key in avg) {
+            let average = avg[key].length > 0 ?
+                avg[key].reduce((a,b) => a + b, 0) / avg[key].length : 0;
+            ret[urlList[idx]][key] = !!key.match(/Num$/g) ? average : average.toFixed(2);
+        }
     }
-    return JSON.stringify(ret);
+    return ret;
 }
 
 const generateCsv = async (data, file) => {
     let msg = 'generate fail';
-    console.log('generateCsv');
-    if (data && file) {
-        let ret: any = await asyncWriteFile(file, data);
-        msg = ret.err ? `generate ${file} success` : 'generate fail' + JSON.stringify(ret.err);
+    let str = 'url,白屏(ms),首屏(ms),总请求数,总资源大小(kb),js数量,img数量,css数量';
+    for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+            const {
+                firstContentfulPaint, firstMeaningfulPaint, reqNum,
+                reqSize, jsNum, imgNum, cssNum
+            } = data[key];
+            str += `\n${key},${firstContentfulPaint},${firstMeaningfulPaint},${reqNum},${reqSize},${jsNum},${imgNum},${cssNum}`
+        }
     }
-    console.log(msg);
+    if (data && file) {
+        let ret: any = await asyncWriteFile(file, str);
+        msg = !!ret.err ? `generate ${file} success` : 'generate fail' + JSON.stringify(ret.err);
+    }
 }
-async function run(file: string, times: number, resultFile: string) {
+
+async function run(file: string, times: number, resultFile: string, api: string) {
     let urlList;
     let fileRes: any = await asyncReadFile(file);
     if (fileRes.data) {
         urlList = fileRes.data.toString().split('\n');
     }
-    // TODO2: request && parse json
-    let data = await getData(urlList, times);
-    console.log(data);
+    let data = await getData(urlList, times, api);
     
     // TODO3: 写入文件
     await generateCsv(data, resultFile);
@@ -136,9 +158,11 @@ async function run(file: string, times: number, resultFile: string) {
 
 program
   .version('0.0.1')
-  .option('-f,--file <type>', 'url列表(默认url.txt,换行分隔)', 'url.txt')
-  .option('-t,--times <type>', '请求遍数(默认1,多次请求用于计算平均值', 1)
-  .option('-o,--out <type>', '输出文件名(默认result.csv', 'result.csv');
+  .option('-a,--api <type>',
+    '请求api(默认http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url=)', config.api)
+  .option('-i,--input <type>', 'url列表(默认url.txt,换行分隔)', config.input)
+  .option('-t,--times <type>', '请求遍数(默认1,多次请求用于计算平均值', config.times)
+  .option('-o,--out <type>', '输出文件名(默认result.csv', config.out);
 
 program.on('--help', function(){
   console.log('Examples:');
@@ -149,6 +173,6 @@ program.on('--help', function(){
 program.parse(process.argv);
 
 if (program.file && program.times) {
-    run(program.file, program.times, program.out);
+    run(program.input, +program.times, program.out, program.api);
 }
 // program.help();
