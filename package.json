@@ -4,7 +4,7 @@
   "description": "online page analyze",
   "main": "index.ts",
   "scripts": {
-    "req": "tsc index.ts && node index.js"
+    "req": "rm index.js && tsc index.ts && node index.js"
   },
   "keywords": [
     "node",
