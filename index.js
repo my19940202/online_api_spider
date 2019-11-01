@@ -227,10 +227,8 @@ function run(file, times, resultFile, api) {
                     return [4 /*yield*/, getData(urlList, times, api)];
                 case 2:
                     data = _a.sent();
-                    // TODO3: 写入文件
                     return [4 /*yield*/, generateCsv(data, resultFile)];
                 case 3:
-                    // TODO3: 写入文件
                     _a.sent();
                     return [2 /*return*/];
             }
@@ -239,14 +237,14 @@ function run(file, times, resultFile, api) {
 }
 program
     .version('0.0.1')
-    .option('-a,--api <type>', '请求api(默认http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url=)', config.api)
-    .option('-i,--input <type>', 'url列表(默认url.txt,换行分隔)', config.input)
-    .option('-t,--times <type>', '请求遍数(默认1,多次请求用于计算平均值', config.times)
-    .option('-o,--out <type>', '输出文件名(默认result.csv', config.out);
+    .option('-a,--api <type>', 'req api(default http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url=)', config.api)
+    .option('-i,--input <type>', 'url list(default url.txt)', config.input)
+    .option('-t,--times <type>', 'repeat times request per url (default 1,repeat request to get avg', config.times)
+    .option('-o,--out <type>', 'output file name(default result.csv', config.out);
 program.on('--help', function () {
     console.log('Examples:');
     console.log('');
-    console.log('$ node index.js -f url.txt -t 1');
+    console.log('$ node index.js -i url.txt -t 2 -o result.txt');
     console.log('$ node index.js -h');
 });
 program.parse(process.argv);

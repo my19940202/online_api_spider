@@ -150,23 +150,22 @@ async function run(file: string, times: number, resultFile: string, api: string)
         urlList = fileRes.data.toString().trim().split('\n');
     }
     let data = await getData(urlList, times, api);
-    
-    // TODO3: 写入文件
+
     await generateCsv(data, resultFile);
 }
 
 program
   .version('0.0.1')
   .option('-a,--api <type>',
-    '请求api(默认http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url=)', config.api)
-  .option('-i,--input <type>', 'url列表(默认url.txt,换行分隔)', config.input)
-  .option('-t,--times <type>', '请求遍数(默认1,多次请求用于计算平均值', config.times)
-  .option('-o,--out <type>', '输出文件名(默认result.csv', config.out);
+    'req api(default http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url=)', config.api)
+  .option('-i,--input <type>', 'url list(default url.txt)', config.input)
+  .option('-t,--times <type>', 'repeat times request per url (default 1,repeat request to get avg', config.times)
+  .option('-o,--out <type>', 'output file name(default result.csv', config.out);
 
 program.on('--help', function(){
   console.log('Examples:');
   console.log('');
-  console.log('$ node index.js -f url.txt -t 1');
+  console.log('$ node index.js -i url.txt -t 2 -o result.txt');
   console.log('$ node index.js -h');
 });
 program.parse(process.argv);
