@@ -9,13 +9,21 @@ const config = {
     times: 1,
     input: 'url.txt',
     out: 'result.csv',
-    api: 'http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url='
+    api: 'http://bjyz-ywrd-lpperf-01.epc.baidu.com:8085/suggest/api/suggest'
 }
 
-async function asyncRequest(url: any) {
+async function asyncRequest(api: string, url: string) {
     console.log('running');
     return new Promise((resolve, reject) => {
-        request(url, (error, response, body) => resolve({error, response, body}));
+        request({
+            url: api,
+            method: 'POST',
+            json: true,
+            headers: {
+                'content-type': 'application/json',
+            },
+            body: {url}
+        }, (error, response, body) => resolve({error, response, body})); 
     });
 }
 
@@ -50,7 +58,7 @@ function safeParseJSON(str: string) {
         }
         return ret;
     } catch (e) {
-        console.log('safeParseJSON', e, str);
+        // console.log('safeParseJSON', e, str);
         return {};
     }
 }
@@ -90,7 +98,7 @@ function extractField(body: any) {
 async function getData(urlList: string[], times: number, api: string) {
     let ret = {};
     for (let idx = 0; idx < urlList.length; idx++) {
-        const url = api + urlList[idx];
+        const url = urlList[idx];
         let res, body;
         let reqSuccessCounter = 0;
         let avg = {
@@ -102,8 +110,8 @@ async function getData(urlList: string[], times: number, api: string) {
         
         // 多次请求 求平均值(最多再重试3次 不然请求次数太多)
         for (let index = 0; index < times + 3; index++) {
-            res = await asyncRequest(url);
-            body = safeParseJSON(res.body);
+            res = await asyncRequest(api, url);
+            body = safeParseJSON(res && res.response && res.response.body);
             if (body && body.audits) {
                 reqSuccessCounter++;
                 let tmp = extractField(body);
@@ -156,11 +164,10 @@ async function run(file: string, times: number, resultFile: string, api: string)
 
 program
   .version('0.0.1')
-  .option('-a,--api <type>',
-    'req api(default http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url=)', config.api)
-  .option('-i,--input <type>', 'url list(default url.txt)', config.input)
+  .option('-a,--api <type>', 'req api', config.api)
+  .option('-i,--input <type>', 'file of url list', config.input)
   .option('-t,--times <type>', 'repeat times request per url (default 1,repeat request to get avg', config.times)
-  .option('-o,--out <type>', 'output file name(default result.csv', config.out);
+  .option('-o,--out <type>', 'output file name', config.out);
 
 program.on('--help', function(){
   console.log('Examples:');
@@ -173,4 +180,3 @@ program.parse(process.argv);
 if (program.input && program.times) {
     run(program.input, +program.times, program.out, program.api);
 }
-// program.help();

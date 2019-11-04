@@ -46,14 +46,22 @@ var config = {
     times: 1,
     input: 'url.txt',
     out: 'result.csv',
-    api: 'http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url='
+    api: 'http://bjyz-ywrd-lpperf-01.epc.baidu.com:8085/suggest/api/suggest'
 };
-function asyncRequest(url) {
+function asyncRequest(api, url) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             console.log('running');
             return [2 /*return*/, new Promise(function (resolve, reject) {
-                    request(url, function (error, response, body) { return resolve({ error: error, response: response, body: body }); });
+                    request({
+                        url: api,
+                        method: 'POST',
+                        json: true,
+                        headers: {
+                            'content-type': 'application/json'
+                        },
+                        body: { url: url }
+                    }, function (error, response, body) { return resolve({ error: error, response: response, body: body }); });
                 })];
         });
     });
@@ -97,7 +105,7 @@ function safeParseJSON(str) {
         return ret;
     }
     catch (e) {
-        console.log('safeParseJSON', e, str);
+        // console.log('safeParseJSON', e, str);
         return {};
     }
 }
@@ -142,7 +150,7 @@ function getData(urlList, times, api) {
                     _a.label = 1;
                 case 1:
                     if (!(idx < urlList.length)) return [3 /*break*/, 7];
-                    url = api + urlList[idx];
+                    url = urlList[idx];
                     res = void 0, body = void 0;
                     reqSuccessCounter = 0;
                     avg = {
@@ -155,10 +163,10 @@ function getData(urlList, times, api) {
                     _a.label = 2;
                 case 2:
                     if (!(index < times + 3)) return [3 /*break*/, 5];
-                    return [4 /*yield*/, asyncRequest(url)];
+                    return [4 /*yield*/, asyncRequest(api, url)];
                 case 3:
                     res = _a.sent();
-                    body = safeParseJSON(res.body);
+                    body = safeParseJSON(res && res.response && res.response.body);
                     if (body && body.audits) {
                         reqSuccessCounter++;
                         tmp = extractField(body);
@@ -237,10 +245,10 @@ function run(file, times, resultFile, api) {
 }
 program
     .version('0.0.1')
-    .option('-a,--api <type>', 'req api(default http://bjyz-lpperf.epc.baidu.com:8085/suggest/api/suggest?url=)', config.api)
-    .option('-i,--input <type>', 'url list(default url.txt)', config.input)
+    .option('-a,--api <type>', 'req api', config.api)
+    .option('-i,--input <type>', 'file of url list', config.input)
     .option('-t,--times <type>', 'repeat times request per url (default 1,repeat request to get avg', config.times)
-    .option('-o,--out <type>', 'output file name(default result.csv', config.out);
+    .option('-o,--out <type>', 'output file name', config.out);
 program.on('--help', function () {
     console.log('Examples:');
     console.log('');
@@ -251,4 +259,3 @@ program.parse(process.argv);
 if (program.input && program.times) {
     run(program.input, +program.times, program.out, program.api);
 }
-// program.help();
