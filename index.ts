@@ -107,12 +107,14 @@ async function getData(urlList: string[], times: number, api: string) {
         };
         console.log(`going to reqest ${idx}th url`, times + 3, );
         ret[urlList[idx]] = {};
-        
+
         // 多次请求 求平均值(最多再重试3次 不然请求次数太多)
         for (let index = 0; index < times + 3; index++) {
             res = await asyncRequest(api, url);
-            body = safeParseJSON(res && res.response && res.response.body);
-            if (body && body.audits) {
+            // body = safeParseJSON(res && res.response && res.response.body && res.response.body.data);
+            if (res && res.response && res.response.body
+                && res.response.body.data && res.response.body.data.audits) {
+                let body = res.response.body.data;
                 reqSuccessCounter++;
                 let tmp = extractField(body);
                 for (const key in tmp) {

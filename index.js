@@ -141,7 +141,7 @@ function extractField(body) {
 }
 function getData(urlList, times, api) {
     return __awaiter(this, void 0, void 0, function () {
-        var ret, idx, url, res, body, reqSuccessCounter, avg, index, tmp, key, key, average;
+        var ret, idx, url, res, body, reqSuccessCounter, avg, index, body_1, tmp, key, key, average;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -166,10 +166,12 @@ function getData(urlList, times, api) {
                     return [4 /*yield*/, asyncRequest(api, url)];
                 case 3:
                     res = _a.sent();
-                    body = safeParseJSON(res && res.response && res.response.body);
-                    if (body && body.audits) {
+                    // body = safeParseJSON(res && res.response && res.response.body && res.response.body.data);
+                    if (res && res.response && res.response.body
+                        && res.response.body.data && res.response.body.data.audits) {
+                        body_1 = res.response.body.data;
                         reqSuccessCounter++;
-                        tmp = extractField(body);
+                        tmp = extractField(body_1);
                         for (key in tmp) {
                             if (tmp.hasOwnProperty(key) && tmp[key] !== undefined) {
                                 avg[key].push(tmp[key]);
@@ -189,6 +191,7 @@ function getData(urlList, times, api) {
                             avg[key].reduce(function (a, b) { return a + b; }, 0) / avg[key].length : 0;
                         ret[urlList[idx]][key] = !!key.match(/Num$/g) ? average : average.toFixed(2);
                     }
+                    console.log(ret[urlList[idx]], 'ret[urlList[idx]][key]');
                     _a.label = 6;
                 case 6:
                     idx++;
